@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Ryko traces (قد تحتوي بيانات حساسة — لا تُرفع)
+*.jsonl
