@@ -4,13 +4,39 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ryko-ai"
-version = "0.0.1"
-description = "Ryko AI — Agent Trust Layer (Arabic-first)"
+version = "0.1.0"
+description = "Ryko AI — Arabic AI platform and model project"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "pydantic>=2.8.0",
+  "pydantic-settings>=2.4.0",
+  "httpx>=0.27.0",
+  "chromadb>=0.5.0",
+  "sse-starlette>=2.1.0",
+  "python-dotenv>=1.0.1",
+]
 
-[project.scripts]
-ryko = "ryko.cli:main"
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.0",
+  "pytest-asyncio>=0.23.0",
+  "ruff>=0.6.0",
+]
+training = [
+  "transformers>=4.43.0",
+  "peft>=0.12.0",
+  "torch>=2.3.0",
+  "datasets>=2.20.0",
+  "accelerate>=0.33.0",
+]
 
 [tool.setuptools]
-packages = ["ryko"]
+packages = ["app", "ryko"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
