@@ -42,30 +42,39 @@
 └──────┬───────┘
        │  HTTP / SSE
        ▼
-┌──────────────────────┐
-│  FastAPI API Router  │  /api/v1/chat | /stream | /models | /health
-└──────┬───────────────┘
-       │
-       ▼
+┌──────────────────────────────────────────────────────┐
+│               FastAPI API Router (v1)                │
+│  /chat | /stream | /models | /health | /agent/*      │
+└──────┬───────────────────────────────────┬───────────┘
+       │                                   │
+       ▼                                   ▼
 ┌──────────────────────┐        ┌──────────────────────────┐
 │      AI Service      │◄──────►│   Model Provider Layer   │
 │  (app/services/      │        │  - DeepSeek API (MVP)    │
 │   ai_service.py)     │        │  - Local / GGUF Model    │
 └──────┬───────────────┘        └──────────────────────────┘
        │
-       │  retrieve/store context (RAG)
+       │ retrieve/store context (RAG)
        ▼
 ┌──────────────────────┐
 │    Memory Service    │
 │ (ChromaDB Vector DB) │
 └──────────────────────┘
+
+┌──────────────────────────────────────────────────────┐
+│            نظام الوكلاء (Agentic Layer)               │
+│  Orchestrator → Planner → Coder → Reviewer           │
+│  + Context من MemoryService (Shared Context)         │
+└──────────────────────────────────────────────────────┘
 ```
 
 **مكونات أساسية:**
 - `app/main.py`: تهيئة FastAPI ودورة حياة الخدمات (`lifespan`)
 - `app/api/v1/routes/chat.py`: مسارات الدردشة، البث، النماذج، والصحة
+- `app/api/v1/routes/agents.py`: مسارات نظام الوكلاء (`/agent/execute`, `/agent/stream`)
 - `app/services/ai_service.py`: طبقة الاستدلال وتوحيد مزودي النماذج
 - `app/services/memory.py`: تخزين واسترجاع السياق عبر ChromaDB
+- `app/agents/`: طبقة الوكلاء (`base`, `planner`, `coder`, `reviewer`, `orchestrator`, `tools`)
 
 ---
 
@@ -106,6 +115,35 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - **Models:** `GET http://localhost:8000/api/v1/models`
 - **Chat:** `POST http://localhost:8000/api/v1/chat`
 - **Stream (SSE):** `POST http://localhost:8000/api/v1/stream`
+- **تنفيذ الوكلاء:** `POST http://localhost:8000/api/v1/agent/execute`
+- **بث خطوات الوكلاء (SSE):** `POST http://localhost:8000/api/v1/agent/stream`
+
+### استخدام نظام الوكلاء (Multi-Agent)
+
+مثال: تنفيذ مهمة معقدة عبر المنسق (تخطيط → برمجة → مراجعة):
+
+```bash
+curl -X POST http://localhost:8000/api/v1/agent/execute \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: <YOUR_API_KEY_IF_ENABLED>" \
+  -d '{
+    "task": "أنشئ endpoint جديد في FastAPI لإرجاع قائمة منتجات وهمية مع اختبار pytest",
+    "session_id": "agents-demo"
+  }'
+```
+
+الاستجابة تتضمن: `plan`, `code_output`, `review_output`, `final_output`, و`steps`.
+
+لبث الخطوات الحية (SSE):
+
+```bash
+curl -N -X POST http://localhost:8000/api/v1/agent/stream \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: <YOUR_API_KEY_IF_ENABLED>" \
+  -d '{"task":"حسّن رسالة الخطأ في chat.py","session_id":"agents-demo"}'
+```
+
+الأحداث المتوقعة: `step`, `step_done`, `plan`, `code`, `review`, `final`, `done`.
 
 مثال طلب دردشة:
 ```bash

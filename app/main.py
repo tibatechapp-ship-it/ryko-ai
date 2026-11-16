@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.v1.routes.agents import router as agents_router
 from app.api.v1.routes.chat import router as chat_router
 from app.core.config import get_settings
 from app.services.ai_service import AIService
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
     app.include_router(chat_router, prefix=settings.api_prefix)
+    app.include_router(agents_router, prefix=settings.api_prefix)
     return app
 
 
