@@ -1,129 +1,153 @@
-# Ryko-AI — منصة ونموذج ذكاء اصطناعي عربي
+# Ryko-AI
 
-مشروع **Ryko-AI** يهدف إلى بناء:
-1. **منصة خلفية (Backend Platform)** باستخدام FastAPI لخدمة الدردشة والبث والذاكرة.
-2. **نموذج ذكاء اصطناعي عربي** متخصص في البرمجة والتواصل مع مسار تدريب LoRA وتصدير GGUF.
+**منصة ذكاء اصطناعي عربية متكاملة للبرمجة والتواصل — FastAPI Platform + Arabic AI Model Pipeline**
 
-> هذا المستودع يحتوي على منصة MVP تعمل حالياً عبر **DeepSeek API** كبوابة استدلال أولية، مع بنية جاهزة للربط بالنموذج المحلي/المدرب لاحقاً.
-
----
-
-## المزايا الحالية (Platform MVP)
-
-- **FastAPI + AsyncIO** مع تهيئة الخدمات عبر `lifespan`
-- نقاط وصول:
-  - `POST /api/v1/chat` — دردشة مع ذاكرة سياقية
-  - `POST /api/v1/stream` — بث حي عبر SSE
-  - `GET /api/v1/models` — النماذج المتاحة
-  - `GET /api/v1/health` — فحص الجاهزية
-- **خدمة ذاكرة** (`services/memory.py`) باستخدام **ChromaDB** لحفظ واسترجاع السياق
-- **خدمة ذكاء اصطناعي** (`services/ai_service.py`) تتصل بـ DeepSeek API (قابلة للتبديل لنموذج محلي)
-- إعدادات آمنة عبر `.env` باستخدام `pydantic-settings`
-- اختبارات `pytest` و CI عبر GitHub Actions
+[![CI Status](https://img.shields.io/github/actions/workflow/status/tibatechapp-ship-it/ryko-ai/ci.yml?branch=main&label=CI&logo=github)](https://github.com/tibatechapp-ship-it/ryko-ai/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-MVP%20Ready-success)](https://github.com/tibatechapp-ship-it/ryko-ai)
 
 ---
 
-## هيكل المشروع
+## نظرة عامة (Overview)
+
+**Ryko-AI** هي منصة FastAPI متطورة، مخصصة للبرمجة والتواصل باللغة العربية، مع دعم كامل للذاكرة السياقية (RAG). يجمع المشروع بين طبقة Backend عالية الأداء (AsyncIO + SSE) ومسار تدريب مخصص لنموذج عربي متخصص في مهام البرمجة (Code Generation, Explanation, Completion, Debugging)، مع قابلية التبديل السلس بين مزودي الاستدلال السحابي والنماذج المحلية.
+
+تم إنجاز المشروع عبر 4 مراحل متكاملة:
+- **المرحلة 1 — التأسيس (Bootstrap):** هيكلة المستودع، المتطلبات، ومتغيرات البيئة.
+- **المرحلة 2 — منصة MVP (Platform):** واجهات الدردشة والبث والذاكرة والخدمات الأساسية.
+- **المرحلة 3 — مسار النموذج (Model Training):** تجهيز البيانات، تدريب LoRA، وتصدير GGUF.
+- **المرحلة 4 — الدمج والجودة (Integration & QA):** اختبارات `pytest`، توثيق، و CI/CD عبر GitHub Actions.
+
+---
+
+## ✨ الميزات الرئيسية (Key Features)
+
+- **محرك API فائق السرعة (FastAPI + AsyncIO):** نقاط وصول معيارية (`/chat`, `/stream`, `/models`, `/health`) مع أداء غير متزامن.
+- **بث مباشر (Server-Sent Events - SSE):** تجربة محادثة لحظية عبر `POST /api/v1/stream`.
+- **ذاكرة سياقية متقدمة (RAG):** خدمة ذاكرة مبنية على **ChromaDB** لحفظ واسترجاع سياق المحادثات وحقنه في الطلبات.
+- **بنية مرنة لمزود النموذج:** تكامل MVP مع **DeepSeek API**، مع نقطة دمج جاهزة للتبديل إلى النموذج المحلي/المدرب (`LOCAL_MODEL_PATH`).
+- **مسار تدريب مدمج للنموذج العربي:** سكربتات لمعالجة البيانات، التدريب بتقنية **LoRA** (مع دعم 4-bit)، والتصدير لصيغة **GGUF** للتشغيل على موارد محدودة.
+- **أمان وإعدادات قابلة للتهيئة:** تحميل الأسرار والإعدادات عبر `.env` باستخدام `pydantic-settings` مع دعم حماية API Key.
+- **جودة مستمرة (CI/CD):** اختبارات تلقائية وتشغيل مسار التدريب عبر GitHub Actions.
+
+---
+
+## 🏗️ البنية المعمارية (Architecture)
 
 ```text
-.
-├── app/
-│   ├── main.py
-│   ├── core/
-│   │   └── config.py
-│   ├── api/
-│   │   └── v1/routes/chat.py
-│   ├── schemas/
-│   │   └── chat.py
-│   └── services/
-│       ├── ai_service.py
-│       └── memory.py
-├── training/
-│   ├── prepare_data.py
-│   ├── train_lora.py
-│   └── quantize.py
-├── tests/
-│   ├── test_chat.py
-│   ├── test_health.py
-│   └── test_memory.py
-├── .github/workflows/
-│   ├── ci.yml
-│   └── train.yml
-├── requirements.txt
-├── .env.example
-└── README.md
+┌──────────────┐
+│    Client    │  (Web / Mobile / CLI)
+└──────┬───────┘
+       │  HTTP / SSE
+       ▼
+┌──────────────────────┐
+│  FastAPI API Router  │  /api/v1/chat | /stream | /models | /health
+└──────┬───────────────┘
+       │
+       ▼
+┌──────────────────────┐        ┌──────────────────────────┐
+│      AI Service      │◄──────►│   Model Provider Layer   │
+│  (app/services/      │        │  - DeepSeek API (MVP)    │
+│   ai_service.py)     │        │  - Local / GGUF Model    │
+└──────┬───────────────┘        └──────────────────────────┘
+       │
+       │  retrieve/store context (RAG)
+       ▼
+┌──────────────────────┐
+│    Memory Service    │
+│ (ChromaDB Vector DB) │
+└──────────────────────┘
 ```
+
+**مكونات أساسية:**
+- `app/main.py`: تهيئة FastAPI ودورة حياة الخدمات (`lifespan`)
+- `app/api/v1/routes/chat.py`: مسارات الدردشة، البث، النماذج، والصحة
+- `app/services/ai_service.py`: طبقة الاستدلال وتوحيد مزودي النماذج
+- `app/services/memory.py`: تخزين واسترجاع السياق عبر ChromaDB
 
 ---
 
-## التشغيل السريع (محلي أو GitHub Codespaces)
+## 🚀 التشغيل السريع (Quick Start)
 
-### 1) تثبيت المتطلبات
+> مناسب للتشغيل المحلي أو عبر **GitHub Codespaces**.
+
+### 1) استنساخ المستودع وتثبيت المتطلبات
 ```bash
+git clone https://github.com/tibatechapp-ship-it/ryko-ai.git
+cd ryko-ai
+
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
 pip install -r requirements.txt
 ```
 
-> في بيئات محدودة (مثل Termux) قد تتطلب حزم التدريب (`torch/transformers/peft`) إعداداً خاصاً. منصة الـ API نفسها تعمل بمتطلبات أخف.
-
-### 2) إعداد المتغيرات البيئية
+### 2) إعداد متغيرات البيئة
 ```bash
 cp .env.example .env
-# عدّل .env وأضف DEEPSEEK_API_KEY لتفعيل الردود الفعلية
+# حدّث القيم المطلوبة داخل .env
 ```
+
+أهم المتغيرات:
+- `DEEPSEEK_API_KEY`: لتفعيل مزود الاستدلال الافتراضي (MVP)
+- `API_KEY`: (اختياري) لحماية نقاط الوصول عبر Header `X-API-Key`
+- `DATABASE_URL`: مسار تخزين ChromaDB (افتراضي: `./data/chroma`)
+- `LOCAL_MODEL_PATH`: مسار النموذج المحلي/المدرب (للتكامل المستقبلي)
 
 ### 3) تشغيل الخادم
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 4) تجربة نقاط الوصول
-- الصحة: `GET http://localhost:8000/api/v1/health`
-- النماذج: `GET http://localhost:8000/api/v1/models`
-- دردشة:
+### 4) تجربة واجهات API
+- **Health:** `GET http://localhost:8000/api/v1/health`
+- **Models:** `GET http://localhost:8000/api/v1/models`
+- **Chat:** `POST http://localhost:8000/api/v1/chat`
+- **Stream (SSE):** `POST http://localhost:8000/api/v1/stream`
+
+مثال طلب دردشة:
 ```bash
 curl -X POST http://localhost:8000/api/v1/chat \
   -H "Content-Type: application/json" \
-  -d '{"message":"اشرح لي ما هو FastAPI","session_id":"demo"}'
+  -H "X-API-Key: <YOUR_API_KEY_IF_ENABLED>" \
+  -d '{
+    "message": "اشرح لي ما هو FastAPI باختصار",
+    "session_id": "demo-session",
+    "use_memory": true
+  }'
 ```
-- البث (SSE): `POST /api/v1/stream`
 
 ---
 
-## الذاكرة السياقية (RAG / Vector Memory)
+## 🧠 مسار التدريب (Training Pipeline)
 
-- التنفيذ الحالي يستخدم **ChromaDB PersistentClient** في المسار `DATABASE_URL` (افتراضي `./data/chroma`).
-- عند تفعيل `use_memory=true`:
-  - يتم حفظ رسالة المستخدم والرد
-  - يتم استرجاع أقرب 3 سياقات مرتبطة بالاستعلام وحقنها في طلب النموذج
+يوفر المشروع مسار تدريب متكامل للنموذج العربي داخل مجلد `training/`:
 
----
+| المرحلة | السكربت | الوظيفة |
+|---|---|---|
+| Data Preparation | `training/prepare_data.py` | تنظيف وتجهيز البيانات (مثل CIDAR / Arabic-Coding-ChatML) وتحويلها لصيغة ChatML (JSONL) |
+| Fine-Tuning (LoRA) | `training/train_lora.py` | تدريب نموذج أساسي (مثل Qwen2.5-Coder / Gemma) باستخدام **LoRA** مع دعم **4-bit** لتقليل استهلاك الذاكرة |
+| Quantization & Export | `training/quantize.py` | تحويل النموذج إلى صيغة **GGUF** للتشغيل عبر `llama.cpp` على موارد محدودة |
 
-## مسار تدريب النموذج العربي
-
-### 1) تحضير البيانات
-يدعم السكربت تحميل مجموعات مثل CIDAR أو قراءة JSONL محلي وتحويلها لصيغة ChatML:
+### أوامر تشغيل نموذجية
 ```bash
+# 1) تجهيز البيانات
 python training/prepare_data.py \
   --dataset arbml/CIDAR \
   --out data/processed/train_chatml.jsonl \
   --limit 20000 \
   --shuffle
-```
 
-### 2) التدريب بـ LoRA
-```bash
+# 2) تدريب LoRA
 python training/train_lora.py \
   --base-model Qwen/Qwen2.5-Coder-7B-Instruct \
   --data-path data/processed/train_chatml.jsonl \
   --output-dir outputs/ryko-ar-lora \
   --epochs 1
-```
-يدعم 4-bit (عند توفر البيئة) لتقليل استهلاك الذاكرة.
 
-### 3) التصدير إلى GGUF
-```bash
+# 3) التصدير إلى GGUF
 python training/quantize.py \
   --hf-model-dir outputs/ryko-ar-lora \
   --outfile outputs/ryko-ar-q4_k_m.gguf \
@@ -131,39 +155,42 @@ python training/quantize.py \
   --quant-type Q4_K_M
 ```
 
-### 4) الدمج مع المنصة
-- بعد توفير نموذج محلي/خادم استدلال محلي، عيّن `LOCAL_MODEL_PATH` في `.env`
-- نقطة الدمج الأساسية موجودة في `app/services/ai_service.py` (يمكن توجيه الاستدلال للمحلي بدل DeepSeek API)
+**GitHub Actions (Training Workflow):**  
+يتوفر Workflow يدوي للتدريب التجريبي عبر `.github/workflows/train.yml` (`workflow_dispatch`) لتشغيل خطوات تجهيز البيانات والتدريب ورفع الـ artifacts.
 
 ---
 
-## الاختبارات و CI
+## 🛡️ الأمان والاختبارات (Security & CI/CD)
+
+### الأمان (Security)
+- **إدارة الأسرار:** جميع المفاتيح والإعدادات الحساسة تُدار عبر `.env` (ولا تُخزن في الكود).
+- **حماية نقاط الوصول:** دعم `API_KEY` عبر Header `X-API-Key` لمسارات API المحمية.
+- **جاهزية JWT:** تهيئة `JWT_SECRET` ضمن الإعدادات لدعم مصادقة JWT في المراحل القادمة.
+- **عزل الإعدادات:** استخدام `pydantic-settings` لتحميل وتهيئة الإعدادات بشكل آمن ومنتظم.
+
+### الاختبارات والجودة (Testing & CI)
+- **اختبارات آلية (`pytest`)** تغطي: الصحة، النماذج، الدردشة، وسلوك خدمة الذاكرة.
+- **CI عبر GitHub Actions:** تشغيل الاختبارات تلقائياً عند `push` و `pull_request` من خلال `.github/workflows/ci.yml`.
+- **Training Automation:** تشغيل يدوي لمسار التدريب التجريبي عبر `.github/workflows/train.yml`.
 
 تشغيل الاختبارات محلياً:
 ```bash
 PYTHONPATH=. pytest -q
 ```
 
-GitHub Actions:
-- `.github/workflows/ci.yml` يشغل اختبارات المنصة
-- `.github/workflows/train.yml` يوفر تشغيلاً يدوياً (workflow_dispatch) لمسار إعداد البيانات والتدريب (smoke config)
+---
+
+## 🗺️ خارطة الطريق (Roadmap)
+
+- [x] **Phase 1:** التأسيس وهيكلة المشروع
+- [x] **Phase 2:** منصة MVP (FastAPI + Chat/Stream + Memory + DeepSeek Integration)
+- [x] **Phase 3:** مسار التدريب (Prepare Data + LoRA + GGUF Export + Training Workflow)
+- [x] **Phase 4:** الاختبارات، التوثيق، و CI/CD
+- [ ] **Next:** استبدال مزود الاستدلال السحابي بالنموذج العربي المحلي (**Local Inference**) بعد اكتمال التدريب والتقييم
+- [ ] تحسينات لاحقة: مصادقة JWT كاملة، تقييم جودة النموذج (Benchmarking)، وتحسينات الأداء والتوسع (Scaling/Observability)
 
 ---
 
-## الأمان والملاحظات
+## الترخيص (License)
 
-- لا تضع مفاتيح سرية داخل الكود أو المستودع؛ استخدم `.env`
-- `API_KEY` اختياري لحماية نقاط الوصول (Header: `X-API-Key`)
-- `JWT_SECRET` مُجهز في الإعدادات للتوسعة المستقبلية نحو JWT كامل
-- DeepSeek API مستخدم كمرحلة MVP لتشغيل المنصة فوراً قبل اكتمال التدريب/النشر المحلي للنموذج
-
----
-
-## الحالة
-
-- ✅ المرحلة 1: التأسيس (requirements, env example, هيكل)
-- ✅ المرحلة 2: منصة MVP (FastAPI, chat/stream/health/models, memory, ai service)
-- ✅ المرحلة 3: سكربتات التدريب (prepare/train_lora/quantize) + workflow تدريب
-- ✅ المرحلة 4: اختبارات وتوثيق و CI
-
-المشروع جاهز للتطوير التدريجي نحو استبدال مزود الاستدلال بالنموذج العربي المدرب محلياً.
+هذا المشروع مرخص تحت رخصة **Apache-2.0**. راجع ملف [LICENSE](LICENSE) للمزيد من التفاصيل.
