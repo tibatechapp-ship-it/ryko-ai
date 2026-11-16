@@ -1,0 +1,56 @@
+name: Ryko Model Training
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_model:
+        description: "Base HuggingFace model"
+        required: false
+        default: "Qwen/Qwen2.5-Coder-7B-Instruct"
+      dataset:
+        description: "Dataset name or local path flow"
+        required: false
+        default: "arbml/CIDAR"
+      limit:
+        description: "Max samples"
+        required: false
+        default: "2000"
+
+jobs:
+  train-lora:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install training dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || true
+          pip install transformers peft datasets accelerate torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Prepare data
+        run: |
+          python training/prepare_data.py --dataset "${{ github.event.inputs.dataset }}" --out data/processed/train_chatml.jsonl --limit ${{ github.event.inputs.limit }} --shuffle
+
+      - name: Train LoRA (CPU smoke config)
+        run: |
+          python training/train_lora.py \
+            --base-model "${{ github.event.inputs.base_model }}" \
+            --data-path data/processed/train_chatml.jsonl \
+            --output-dir outputs/ryko-ar-lora \
+            --epochs 1 \
+            --batch-size 1 \
+            --grad-accum 1 \
+            --max-seq-len 256 \
+            --no-4bit
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ryko-ar-lora
+          path: outputs/ryko-ar-lora
