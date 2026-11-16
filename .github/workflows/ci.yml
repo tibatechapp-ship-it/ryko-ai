@@ -1,33 +1,27 @@
-name: Ryko CI
+name: Ryko Platform CI
 
 on:
   push:
+  pull_request:
   workflow_dispatch:
 
 jobs:
-  trust-checks:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: "1) Demo - run without any install"
-        run: python -m ryko.cli demo
-
-      - name: "2) Verify - hash chain intact"
-        run: python -m ryko.cli verify
-
-      - name: "3) Audit - must catch the planted lie (exit 1)"
-        shell: bash
+      - name: Install dependencies
         run: |
-          set +e
-          python -m ryko.cli audit
-          code=$?
-          set -e
-          if [ "$code" -ne 1 ]; then
-            echo "✘ المتوقع خروج 1 (كشف الكذبة)، وصل: $code"
-            exit 1
-          fi
-          echo "✔ المدقق كشف الكذبة المزروعة كما صُمم"
+          python -m pip install --upgrade pip
+          pip install fastapi uvicorn pydantic pydantic-settings httpx pytest pytest-asyncio chromadb sse-starlette python-dotenv
+
+      - name: Run tests
+        env:
+          PYTHONPATH: .
+        run: pytest -q
